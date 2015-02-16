@@ -20,8 +20,10 @@
  */
 
 #include "netris.h"
+#include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <term.h>
 #include <curses.h>
 #include <string.h>
 #include <stdlib.h>
@@ -57,6 +59,7 @@ static EventGenRec keyGen =
 static int boardYPos[MAX_SCREENS], boardXPos[MAX_SCREENS];
 static int statusYPos, statusXPos;
 static int haveColor;
+static int screens_dirty = 0;
 
 static char *term_vi;	/* String to make cursor invisible */
 static char *term_ve;	/* String to make cursor visible */
@@ -98,6 +101,7 @@ ExtFunc void InitScreens(void)
 #endif
 
 	AtExit(CleanupScreens);
+	screens_dirty = 1;
 	RestoreSignals(NULL, &oldMask);
 
 	cbreak();
@@ -116,9 +120,12 @@ ExtFunc void InitScreens(void)
 
 ExtFunc void CleanupScreens(void)
 {
-	RemoveEventGen(&keyGen);
-	endwin();
-	OutputTermStr(term_ve, 1);
+	if (screens_dirty) {
+		RemoveEventGen(&keyGen);
+		endwin();
+		OutputTermStr(term_ve, 1);
+		screens_dirty = 0;
+	}
 }
 
 ExtFunc void GetTermcapInfo(void)
@@ -201,6 +208,8 @@ ExtFunc void InitScreen(int scr)
 	for (y = boardVisible[scr] - 1; y >= 0; --y) {
 		move(boardYPos[scr] - y, boardXPos[scr] - 1);
 		addch('|');
+		for (x = boardWidth[scr] - 1; x >= 0; --x)
+			addstr("  ");
 		move(boardYPos[scr] - y, boardXPos[scr] + 2 * boardWidth[scr]);
 		addch('|');
 	}
@@ -256,6 +265,29 @@ ExtFunc void PlotUnderline(int scr, int x, int flag)
 
 ExtFunc void ShowDisplayInfo(void)
 {
+	if (game == GT_classicTwo) {
+		move(statusYPos - 5, statusXPos);
+		printw("Enemy lines: %3d/%4d", enemyLinesCleared, enemyTotalLinesCleared);
+	}
+	move(statusYPos - 4, statusXPos);
+	printw("My lines:    %3d/%4d", myLinesCleared, myTotalLinesCleared);
+	move(statusYPos - 3, statusXPos);
+	printw("Won:  %3d", won);
+	move(statusYPos - 2, statusXPos);
+	printw("Lost: %3d", lost);
+
+	move(statusYPos - 1, statusXPos);
+	switch(gameState) {
+	case STATE_WAIT_CONNECTION:
+		addstr("Waiting for opponent...      ");
+		break;
+	case STATE_WAIT_KEYPRESS:
+		addstr("Press the key for a new game.");
+		break;
+	default:
+		addstr("                             ");
+	}
+
 	move(statusYPos - 9, statusXPos);
 	printw("Seed: %d", initSeed);
 	clrtoeol();
@@ -263,7 +295,7 @@ ExtFunc void ShowDisplayInfo(void)
 	printw("Speed: %dms", speed / 1000);
 	clrtoeol();
 	if (robotEnable) {
-		move(statusYPos - 6, statusXPos);
+		move(statusYPos - 7, statusXPos);
 		if (fairRobot)
 			addstr("Controlled by a fair robot");
 		else
@@ -271,7 +303,7 @@ ExtFunc void ShowDisplayInfo(void)
 		clrtoeol();
 	}
 	if (opponentFlags & SCF_usingRobot) {
-		move(statusYPos - 5, statusXPos);
+		move(statusYPos - 6, statusXPos);
 		if (opponentFlags & SCF_fairRobot)
 			addstr("The opponent is a fair robot");
 		else

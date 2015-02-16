@@ -42,6 +42,8 @@ static int isServer, lostConn, gotEndConn;
 
 ExtFunc void InitNet(void)
 {
+	lostConn = 0;
+	gotEndConn = 0;
 	AtExit(CloseNet);
 }
 
@@ -50,7 +52,7 @@ ExtFunc int WaitForConnection(char *portStr)
 	struct sockaddr_in addr;
 	struct hostent *host;
 	int sockListen;
-	int addrLen;
+	socklen_t addrLen;
 	short port;
 	int val1;
 	struct linger val2;

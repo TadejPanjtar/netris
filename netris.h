@@ -65,7 +65,7 @@ typedef long netint4;
 
 #define DEFAULT_PORT 9284	/* Very arbitrary */
 
-#define DEFAULT_KEYS "jkl mspf^l"
+#define DEFAULT_KEYS "jkl mspf^ln"
 
 /* Protocol versions */
 #define MAJOR_VERSION		1	
@@ -152,6 +152,13 @@ typedef struct _ShapeOption {
 typedef int (*ShapeDrawFunc)(int scr, int y, int x,
 					BlockType type, void *data);
 
+enum States {
+	STATE_STARTING,
+	STATE_PLAYING,
+	STATE_WAIT_CONNECTION,
+	STATE_WAIT_KEYPRESS
+};
+
 EXT GameType game;
 EXT int boardHeight[MAX_SCREENS];
 EXT int boardVisible[MAX_SCREENS], boardWidth[MAX_SCREENS];
@@ -167,10 +174,18 @@ EXT long stepDownInterval, speed;
 
 EXT int myFlags, opponentFlags;
 
+EXT int won, lost;
+EXT enum States gameState;
+
 EXT char scratch[1024];
 
 extern ShapeOption stdOptions[];
 extern char *version_string;
+
+EXT int myLinesCleared;
+EXT int enemyLinesCleared;
+EXT int myTotalLinesCleared;
+EXT int enemyTotalLinesCleared;
 
 #include "proto.h"
 
